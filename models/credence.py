@@ -49,6 +49,17 @@ class Credence:
         
         # generator for treatment
         #self.model_treat = self.data_processed[self.Tnames].mean()
+        # T | X
+        # self.model_treat = autoencoder.conVAE(
+             # df=self.data_processed,
+             # Xnames=self.Xnames,
+             # Ynames=self.Tnames,
+             # cat_cols=self.categorical_var,
+             # var_bounds=self.var_bounds,
+             # latent_dim=latent_dim,
+             # hidden_dim=hidden_dim,
+             # kld_rigidity=kld_rigidity,
+        # )
         self.model_treat = autoencoder.conVAE(
              df=self.data_processed,
              Xnames=[],
