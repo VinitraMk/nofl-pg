@@ -44,7 +44,9 @@ class Credence:
         hidden_dim = [8],
         batch_size = 64,
         kld_rigidity = 0.2,
-        max_epochs = 100
+        max_epochs = 100,
+        treatment_effect_fn=lambda x: 0,
+        selection_bias_fn=lambda x, t: 0
     ):
         
         # generator for treatment
@@ -108,6 +110,10 @@ class Credence:
             var_bounds = self.var_bounds,
             latent_dim = latent_dim,
             hidden_dim = hidden_dim,
+            potential_outcome = True,
+            treatment_cols = self.Tnames,
+            treatment_effect_fn = treatment_effect_fn,
+            selection_bias_fn = selection_bias_fn,
             kld_rigidity = kld_rigidity
         )
         bar = pb.ProgressBar()
@@ -148,10 +154,10 @@ class Credence:
             pi_out = self.model_out.forward(Y)
 
         Tgen = T
-        print('pi cov',pi_cov)
+        #print('pi cov',pi_cov)
         Xgen = self.model_cov.sample(pi = pi_cov, x = Tgen)
-        print('pi out', pi_out[0].size(), pi_out[1].size())
-        print('gen shapes', Xgen.size(), T.size())
+        #print('pi out', pi_out[0].size(), pi_out[1].size())
+        #print('gen shapes', Xgen.size(), T.size())
         Ygen = self.model_out.sample(pi = pi_out, x = torch.cat((Xgen, Tgen),1))
         Ygen_prime = self.model_out.sample(pi = pi_out, x = torch.cat((Xgen, 1 - Tgen), 1))
 

@@ -3,6 +3,70 @@ import numpy as np
 import pandas as pd
 import models.autoencoder as vae
 import models.credence as cred
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+def view_distribution(observed, generated_df):
+
+    X, Y0, Y1, _ = observed
+    #print(generated_df)
+
+    # print(X[:,0].shape, generated_df[1]["X1"].shape)
+    # print('true value range', X[:, 0].min(), X[:, 0].max())
+    # print('gen value range', generated_df[0]["X1"].min(), generated_df[0]["X1"].max())
+    #sns.scatterplot(y="Y0",x="T",data=generated_df[0])
+    fig,ax = plt.subplots(nrows=5,ncols=2, figsize=(30,30))
+    sns.kdeplot(X[:,0], ax=ax[0,0], fill=True)
+    ax[0,0].set_title('Observed X_0')
+    sns.kdeplot(generated_df[1]["X0"], ax=ax[0,1], fill=True)
+    ax[0,1].set_title('Generated X_0')
+
+    sns.kdeplot(X[:, 1], ax = ax[1, 0], fill = True)
+    ax[1,0].set_title('Observed X_1')
+    sns.kdeplot(generated_df[1]["X1"], ax = ax[1, 1], fill = True)
+    ax[1,1].set_title('Generated X_1')
+
+    sns.kdeplot(X[:, 2], ax = ax[2, 0], fill = True)
+    ax[2,0].set_title('Observed X_2')
+    sns.kdeplot(generated_df[1]["X2"], ax = ax[2, 1], fill = True)
+    ax[2,1].set_title('Generated X_2')
+
+    sns.kdeplot(X[:, 3], ax = ax[3, 0], fill = True)
+    ax[3,0].set_title('Observed X_3')
+    sns.kdeplot(generated_df[1]["X3"], ax = ax[3, 1], fill = True)
+    ax[3,1].set_title('Generated X_3')
+
+    sns.kdeplot(X[:, 4], ax = ax[4, 0], fill = True)
+    ax[4,0].set_title('Observed X_4')
+    sns.kdeplot(generated_df[1]["X4"], ax = ax[4, 1], fill = True)
+    ax[4,1].set_title('Generated X_4')
+
+    plt.show()
+
+    fig,ax = plt.subplots(nrows=4,ncols=2,figsize=(15,30))
+
+    sns.kdeplot(Y0, ax = ax[0,0], fill = True)
+    ax[0,0].set_title('Observed Y0')
+    sns.kdeplot(generated_df[1]["Y0"], ax = ax[0,1], fill = True)
+    ax[0,1].set_title('Generated Y0')
+
+    sns.kdeplot(Y1, ax = ax[1,0], fill = True)
+    ax[1,0].set_title('Observed Y1')
+    sns.kdeplot(generated_df[1]["Y1"], ax = ax[1,1], fill = True)
+    ax[1,1].set_title('Generated Y1')
+
+    sns.kdeplot(Y0, ax = ax[2,0], fill = True)
+    ax[2,0].set_title('Observed Y0')
+    sns.kdeplot(generated_df[1]["Yprime0"], ax = ax[2,1], fill = True)
+    ax[2,1].set_title('Generated Y0 Prime')
+
+    sns.kdeplot(Y1, ax = ax[3,0], fill = True)
+    ax[3,0].set_title('Observed Y1')
+    sns.kdeplot(generated_df[1]["Yprime1"], ax = ax[3,1], fill = True)
+    ax[3,1].set_title('Generated Y1 Prime')
+
+    plt.show()
+
 
 def main(args):
 
@@ -26,8 +90,10 @@ def main(args):
         gen_models = cred_obj.fit(kld_rigidity = 1.0, max_epochs = 5)
 
         # generate samples
-        df_gen = cred_obj.sample()
-        print(df_gen)
+        generated_df = cred_obj.sample()
+        observed = (X, Y0, Y1, T)
+        #print(generated_df)
+        view_distribution(observed, generated_df)
 
     else:
         SystemExit('Invalid dataset value provided!')
