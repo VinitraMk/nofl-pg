@@ -156,7 +156,7 @@ class Credence:
         Ygen = self.model_out.sample(pi = pi_out, x = torch.cat((Xgen, Tgen),1))
         Ygen_prime = self.model_out.sample(pi = pi_out, x = torch.cat((Xgen, 1 - Tgen), 1))
 
-        df = pd.DataFrame(X.detach().numpy(), columns = self.Xnames)
+        df = pd.DataFrame(Xgen.detach().numpy(), columns = self.Xnames)
         df_T = pd.DataFrame(Tgen.detach().numpy(), columns=self.Tnames)
         df_Y = pd.DataFrame(Ygen.detach().numpy(),columns=['Y%d'%i for i in range(Ygen.detach().numpy().shape[1])])
         df_Y_prime = pd.DataFrame(Ygen_prime.detach().numpy(),columns=['Yprime%d'%i for i in range(Ygen.detach().numpy().shape[1])])
