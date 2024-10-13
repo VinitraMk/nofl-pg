@@ -159,7 +159,7 @@ class NFL:
             #pi_cov = self.model_cov.forward(X)
             pi_out = self.model_out.forward(Y)
 
-        print('gt X shape', X.shape)
+        #print('gt X shape', X.shape)
         Tgen = self.model_treat.sample(pi = pi_treat, x = X)
         #print('pi cov',pi_cov)
         #Xgen = self.model_cov.sample(pi = pi_cov, x = Tgen)
