@@ -1,0 +1,2 @@
+kld_rigidity: 0.045820331911931286
+max_epochs: 3
