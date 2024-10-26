@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 
-class Credence:
+class NFL:
 
     def __init__(
         self,
@@ -51,17 +51,29 @@ class Credence:
         
         # generator for treatment
         #self.model_treat = self.data_processed[self.Tnames].mean()
-        # generate T without from gt T
+        # T | X
         self.model_treat = autoencoder.conVAE(
              df=self.data_processed,
-             Xnames=[],
+             Xnames=self.Xnames,
              Ynames=self.Tnames,
              cat_cols=self.categorical_var,
              var_bounds=self.var_bounds,
              latent_dim=latent_dim,
              hidden_dim=hidden_dim,
              kld_rigidity=kld_rigidity,
-        )
+        ).float()
+
+        # generate T without from gt T
+        # self.model_treat = autoencoder.conVAE(
+             # df=self.data_processed,
+             # Xnames=[],
+             # Ynames=self.Tnames,
+             # cat_cols=self.categorical_var,
+             # var_bounds=self.var_bounds,
+             # latent_dim=latent_dim,
+             # hidden_dim=hidden_dim,
+             # kld_rigidity=kld_rigidity,
+        # )
 
         bar = pb.ProgressBar()
         self.trainer_treat = pl.Trainer(
@@ -73,24 +85,24 @@ class Credence:
         )
 
         # generator for X | T
-        self.model_cov = autoencoder.conVAE(
-            df = self.data_processed,
-            Xnames=self.Tnames,
-            Ynames = self.Xnames,
-            cat_cols = self.categorical_var,
-            var_bounds = self.var_bounds,
-            latent_dim = latent_dim,
-            hidden_dim = hidden_dim,
-            kld_rigidity = kld_rigidity 
-        )
-        bar = pb.ProgressBar()
-        self.trainer_cov = pl.Trainer(
-            max_epochs = max_epochs,
-            callbacks = [bar]
-        )
-        self.trainer_cov.fit(
-            self.model_cov, self.model_cov.train_loader, self.model_cov.val_loader
-        )
+        # self.model_cov = autoencoder.conVAE(
+            # df = self.data_processed,
+            # Xnames=self.Tnames,
+            # Ynames = self.Xnames,
+            # cat_cols = self.categorical_var,
+            # var_bounds = self.var_bounds,
+            # latent_dim = latent_dim,
+            # hidden_dim = hidden_dim,
+            # kld_rigidity = kld_rigidity 
+        # )
+        # bar = pb.ProgressBar()
+        # self.trainer_cov = pl.Trainer(
+            # max_epochs = max_epochs,
+            # callbacks = [bar]
+        # )
+        # self.trainer_cov.fit(
+            # self.model_cov, self.model_cov.train_loader, self.model_cov.val_loader
+        # )
 
         # generator for Y | X,T
         self.model_out = autoencoder.conVAE(
@@ -116,23 +128,24 @@ class Credence:
             self.model_out, self.model_out.train_loader, self.model_out.val_loader
         )
 
-        return [self.model_treat, self.model_cov, self.model_out]
+        return [self.model_treat, self.model_out]
     
     def sample(self, data = None):
         num_samples = self.data_processed.shape[0]
         print("no of samples: ", num_samples)
-        
+        X = torch.tensor(self.data_processed[self.Xnames].values).float()
+        #pi_cov = self.model_cov.forward(X)
+        #pi_cov = (
+            #torch.zeros((num_samples, self.model_cov.latent_dim)),
+            #torch.ones((num_samples, self.model_cov.latent_dim)),
+        #)
         if data is None:
             pi_treat = (
                 torch.zeros((num_samples, self.model_treat.latent_dim)),
                 torch.zeros((num_samples, self.model_treat.latent_dim)),
             )
-
-            pi_cov = (
-                torch.zeros((num_samples, self.model_cov.latent_dim)),
-                torch.ones((num_samples, self.model_cov.latent_dim)),
-            )
             
+            #T = torch.bernoulli(torch.ones((num_samples,1))*0.5)
             pi_out = (
                 torch.zeros((num_samples, self.model_out.latent_dim)),
                 torch.ones((num_samples, self.model_out.latent_dim)),
@@ -142,21 +155,20 @@ class Credence:
             num_samples = data.shape[0]
             T = torch.tensor(data[self.Tnames].values.astype(float)).float()
             Y = torch.tensor(data[self.Ynames].values.astype(float)).float()
-            X = torch.tensor(data[self.Xnames].values.astype(float)).float()
-            pi_treat = self.model_treat.forward(T)
-            pi_cov = self.model_cov.forward(X)
+            #X = torch.tensor(data[self.Xnames].values.astype(float)).float()
+            #pi_cov = self.model_cov.forward(X)
             pi_out = self.model_out.forward(Y)
 
         #print('gt X shape', X.shape)
-        Tgen = self.model_treat.sample(pi = pi_treat, x = torch.empty(size=(num_samples, 0)))
+        Tgen = self.model_treat.sample(pi = pi_treat, x = X)
         #print('pi cov',pi_cov)
-        Xgen = self.model_cov.sample(pi = pi_cov, x = Tgen)
+        #Xgen = self.model_cov.sample(pi = pi_cov, x = Tgen)
         #print('pi out', pi_out[0].size(), pi_out[1].size())
         #print('gen shapes', Xgen.size(), T.size())
-        Ygen = self.model_out.sample(pi = pi_out, x = torch.cat((Xgen, Tgen),1))
-        Ygen_prime = self.model_out.sample(pi = pi_out, x = torch.cat((Xgen, 1 - Tgen), 1))
+        Ygen = self.model_out.sample(pi = pi_out, x = torch.cat((X, Tgen),1))
+        Ygen_prime = self.model_out.sample(pi = pi_out, x = torch.cat((X, 1 - Tgen), 1))
 
-        df = pd.DataFrame(Xgen.detach().numpy(), columns = self.Xnames)
+        df = pd.DataFrame(X.detach().numpy(), columns = self.Xnames)
         df_T = pd.DataFrame(Tgen.detach().numpy(), columns=self.Tnames)
         df_Y = pd.DataFrame(Ygen.detach().numpy(),columns=['Y%d'%i for i in range(Ygen.detach().numpy().shape[1])])
         df_Y_prime = pd.DataFrame(Ygen_prime.detach().numpy(),columns=['Yprime%d'%i for i in range(Ygen.detach().numpy().shape[1])])

@@ -2,7 +2,7 @@ import argparse
 import numpy as np
 import pandas as pd
 import models.autoencoder as vae
-import models.credence as cred
+import models.nfl as nfl 
 import seaborn as sns
 import matplotlib.pyplot as plt
 
@@ -80,7 +80,7 @@ def main(args):
         df['Y'] = T*Y1 + (1 - T)*Y0
         df['T'] = T
     
-        cred_obj = cred.Credence(
+        cred_obj = nfl.NFL(
             data = df,
             outcome_var = ['Y'],
             treatment_var = ['T'],
@@ -94,7 +94,29 @@ def main(args):
         observed = (X, Y0, Y1, T)
         #print(generated_df)
         view_distribution(observed, generated_df)
+    elif args.dataset_type == 'acic19_linear':
+        gt_df = pd.read_csv('./data/datasets/acic19_low_dim_1_linear.csv')
 
+        x_vars = ['V%d'%(i) for i in range(1,11)]
+        y_vars = ['Y', 'Y_cf']
+
+        cred_obj = nfl.NFL(
+            data = gt_df,
+            outcome_var = ['Y'],
+            treatment_var = ['A'],
+            categorical_var = ['A'],
+            numerical_var=x_vars+['Y']
+        )
+        gen_models = cred_obj.fit(kld_rigidity = 1.0, max_epochs = 5)
+
+        # generated samples
+        generated_df, generated_df_prime = cred_obj.sample()
+        generated_df_prime['Y'] = (generated_df_prime['A'] * generated_df_prime['Y1']) + ((1 - generated_df_prime['A']) * generated_df_prime['Y0'])
+        generated_df_prime['Y_cf'] = (generated_df_prime['A'] * generated_df_prime['Yprime1']) + ((1 - generated_df_prime['A']) * generated_df_prime['Yprime0'])
+        #print(gt_df)
+        #print(generated_df_prime)
+        #print(len(x_vars), len(y_vars))
+        view_distribution(gt_df, generated_df_prime, x_vars, y_vars, (25,55), (10,10))
     else:
         SystemExit('Invalid dataset value provided!')
 
