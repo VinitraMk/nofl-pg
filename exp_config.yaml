@@ -1,0 +1,14 @@
+frameworks:
+    credence:
+        kld_rigidity_range: [0,0.1]
+        max_epochs: 400
+        lr: 0.0001
+        merge_plots: True
+        output_dir_name: 'credence'
+    modified_credence:
+        kld_rigidity_range: [0.05,0.1]
+        max_epochs: 400
+        lr: 0.0001
+        merge_plots: False
+        output_dir_name: 'modified-credence'
+dataset_type: 'acic19_linear'

@@ -1,3 +1,4 @@
+import yaml
 import numpy as np
 
 def sample_hyperparameter(params, param_ranges):
@@ -13,3 +14,16 @@ def save_params(params, filepath):
         lines.append(ln)
     with open(filepath, 'w+') as fp:
         fp.writelines(lines)
+
+def read_yaml(ypath):
+    yml_params = {}
+    with open(ypath, "r") as stream:
+        try:
+            yml_params = yaml.safe_load(stream)
+        except yaml.YAMLError as err:
+            print(err)
+    return yml_params
+
+def dump_yaml(ypath, datadict):
+    with open(ypath, 'w') as outfile:
+        yaml.dump(datadict, outfile, default_flow_style=False)

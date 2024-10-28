@@ -9,7 +9,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import ipywidgets as widgets
 from IPython.display import display
-from common.utils import sample_hyperparameter, save_params
+from common.utils import sample_hyperparameter, save_params, read_yaml
 from common.evaluate import *
 from datetime import datetime
 import os
@@ -46,7 +46,7 @@ def view_distribution(gt_df, generated_df, colnames, chart_path, figsize = (15,3
 
 # conduct experiment
 
-def use_modified_credence(gt_df, x_vars, y_vars, out_vars, treat_vars, categorical_vars, num_vars, sample_params, output_dir, exp_args):
+def use_modified_credence(gt_df, x_vars, y_vars, out_vars, treat_vars, categorical_vars, num_vars, sample_params, output_dir, exp_params):
     nfl_obj = nfl.NFL(
         data = gt_df,
         outcome_var = out_vars,
@@ -59,7 +59,7 @@ def use_modified_credence(gt_df, x_vars, y_vars, out_vars, treat_vars, categoric
     #print('\n\nHyperparameters')
     #print('kld rigidity:', sample_params['kld_rigidity'])
     #print('max epochs', max_epochs, '\n\n')
-    gen_models = nfl_obj.fit(latent_dim = 4, hidden_dim = [8,16,32,16,8], kld_rigidity = sample_params['kld_rigidity'], max_epochs = sample_params['max_epochs'])
+    gen_models = nfl_obj.fit(latent_dim = 4, hidden_dim = [8,16,32,16,8], kld_rigidity = sample_params['kld_rigidity'], max_epochs = sample_params['max_epochs'], lr = exp_params['lr'])
 
     # generated samples
     generated_df, generated_df_prime = nfl_obj.sample()
@@ -77,7 +77,7 @@ def use_modified_credence(gt_df, x_vars, y_vars, out_vars, treat_vars, categoric
     chart_path = os.path.join(exp_dir, filename)
     params_path = os.path.join(exp_dir, f'{experiment_name}-params.txt')
     csv_path = os.path.join(exp_dir, f'{experiment_name}-gendata.csv')
-    view_distribution(gt_df, generated_df_prime, y_vars, chart_path, (10,10), exp_args.merge_plots)
+    view_distribution(gt_df, generated_df_prime, y_vars, chart_path, (10,10), exp_params['merge_plots'])
     save_params(sample_params, params_path)
     generated_df_prime.to_csv(csv_path, index = False)
     #print(generated_df_prime['Y'].shape, gt_df['Y'].shape, generated_df_prime['Y_cf'].shape, gt_df['Y_cf'].shape)
@@ -87,7 +87,7 @@ def use_modified_credence(gt_df, x_vars, y_vars, out_vars, treat_vars, categoric
     #print('Inception score: ', iss)
 
 
-def use_credence(gt_df, x_vars, y_vars, out_vars, treat_vars, categorical_vars, num_vars, sample_params, output_dir, exp_args):
+def use_credence(gt_df, x_vars, y_vars, out_vars, treat_vars, categorical_vars, num_vars, sample_params, output_dir, exp_params):
     cred_obj = credence.Credence(
         data = gt_df,
         outcome_var = out_vars,
@@ -100,7 +100,7 @@ def use_credence(gt_df, x_vars, y_vars, out_vars, treat_vars, categorical_vars, 
     #print('\n\nHyperparameters')
     #print('kld rigidity:', sample_params['kld_rigidity'])
     #print('max epochs', max_epochs, '\n\n')
-    gen_models = cred_obj.fit(latent_dim = 4, hidden_dim = [8,16,32,16,8], kld_rigidity = sample_params['kld_rigidity'], max_epochs = sample_params['max_epochs'])
+    gen_models = cred_obj.fit(latent_dim = 4, hidden_dim = [8,16,32,16,8], kld_rigidity = sample_params['kld_rigidity'], max_epochs = sample_params['max_epochs'], lr = exp_params['lr'])
 
     # generated samples
     generated_df, generated_df_prime = cred_obj.sample()
@@ -118,11 +118,11 @@ def use_credence(gt_df, x_vars, y_vars, out_vars, treat_vars, categorical_vars, 
     filename = f'{experiment_name}-X'
     params_path = os.path.join(exp_dir, f'{experiment_name}-params.txt')
     chart_path = os.path.join(exp_dir, filename)
-    view_distribution(gt_df, generated_df_prime, x_vars, chart_path, (25,50), exp_args.merge_plots)
+    view_distribution(gt_df, generated_df_prime, x_vars, chart_path, (25,50), exp_params['merge_plots'])
     filename = f'{experiment_name}-Y'
     chart_path = os.path.join(exp_dir, filename)
     csv_path = os.path.join(exp_dir, f'{experiment_name}-gendata.csv')
-    view_distribution(gt_df, generated_df_prime, y_vars, chart_path, (10,10), exp_args.merge_plots)
+    view_distribution(gt_df, generated_df_prime, y_vars, chart_path, (10,10), exp_params['merge_plots'])
     save_params(sample_params, params_path)
     generated_df_prime.to_csv(csv_path, index = False)
     #print(generated_df_prime['Y'].shape, gt_df['Y'].shape)
@@ -131,7 +131,7 @@ def use_credence(gt_df, x_vars, y_vars, out_vars, treat_vars, categorical_vars, 
     #print('FID score: ', fids)
     #print('Inception score: ', iss)
 
-def run_experiment(sample_params, dataset_type, framework_type, output_dir, exp_args):
+def run_experiment(sample_params, dataset_type, framework_type, output_dir, exp_params):
     if dataset_type == 'toy':
     # generating toy dataset
         X = np.random.normal(0, 1, (2000, 5))
@@ -147,11 +147,11 @@ def run_experiment(sample_params, dataset_type, framework_type, output_dir, exp_
         gt_df['T'] = T
 
         if framework_type == 'modified_credence':
-            print("\nRunning modified credence")
-            use_modified_credence(gt_df, xnames, ynames, ['Y'], ['T'], ['T'], ['Y'], sample_params, output_dir, exp_args)
+            #print("\nRunning modified credence")
+            use_modified_credence(gt_df, xnames, ynames, ['Y'], ['T'], ['T'], ['Y'], sample_params, output_dir, exp_params)
         elif framework_type == 'credence':
-            print("\nRunning credence")
-            use_credence(gt_df, xnames, ynames, ['Y'], ['T'], ['T'], ['Y'], sample_params, output_dir, exp_args)
+            #print("\nRunning credence")
+            use_credence(gt_df, xnames, ynames, ['Y'], ['T'], ['T'], ['Y'], sample_params, output_dir, exp_params)
         else:
             SystemExit('Invalid framework type provided')
     elif dataset_type == 'acic19_linear':
@@ -161,11 +161,11 @@ def run_experiment(sample_params, dataset_type, framework_type, output_dir, exp_
         y_vars = ['Y', 'Y_cf']
 
         if framework_type == 'modified_credence':
-            print("\nRunning modified credence")
-            use_modified_credence(gt_df, x_vars, y_vars, ['Y'], ['A'], ['A'], ['Y'], sample_params, output_dir, exp_args)
+            #print("\nRunning modified credence")
+            use_modified_credence(gt_df, x_vars, y_vars, ['Y'], ['A'], ['A'], ['Y'], sample_params, output_dir, exp_params)
         elif framework_type == 'credence':
-            print("\nRunning Credence")
-            use_credence(gt_df, x_vars, y_vars, ['Y'], ['A'], ['A'], ['Y'], sample_params, output_dir, exp_args)
+            #print("\nRunning Credence")
+            use_credence(gt_df, x_vars, y_vars, ['Y'], ['A'], ['A'], ['Y'], sample_params, output_dir, exp_params)
         else:
             SystemExit('Invalid framework type provided')
     elif dataset_type == 'acic19_polynomial':
@@ -175,30 +175,34 @@ def run_experiment(sample_params, dataset_type, framework_type, output_dir, exp_
         y_vars = ['Y', 'Y_cf']
 
         if framework_type == 'modified_credence':
-            print("\n\n\nRunning modified credence")
-            use_modified_credence(gt_df, x_vars, y_vars, ['Y'], ['A'], ['A'], ['Y'], sample_params, output_dir, exp_args)
+            #print("\n\n\nRunning modified credence")
+            use_modified_credence(gt_df, x_vars, y_vars, ['Y'], ['A'], ['A'], ['Y'], sample_params, output_dir, exp_params['frameworks']['modified_credence'])
         elif framework_type == 'credence':
-            print("\n\n\nRunning credence")
-            use_credence(gt_df, x_vars, y_vars, ['Y'], ['A'], ['A'], ['Y'], sample_params, output_dir, exp_args)
+            #print("\n\n\nRunning credence")
+            use_credence(gt_df, x_vars, y_vars, ['Y'], ['A'], ['A'], ['Y'], sample_params, output_dir, exp_params['frameworks']['credence'])
         else:
             SystemExit('Invalid framework type provided')
     else:
         SystemExit('Invalid dataset value provided!')
 
-def run_job(job_output_dir, dataset_type, exp_args):
-    for j in range(exp_args.no_of_exps):
-        print(f"\n\nRunning experiment #{j+1}\n\n")
-        sample_params = sample_hyperparameter(['kld_rigidity'], [(0.1,0.2)])
-        sample_params['max_epochs'] = exp_args.max_epochs
-        sample_params['dataset'] = dataset_type
+def run_job(job_output_dir, dataset_type, exp_params):
+    frameworks = list(exp_params['frameworks'].keys())
+    for j in range(args.no_of_exps):
+        print(f"\n\nRunning experiment #{j+1}")
+        for f in frameworks:
+            sample_params = sample_hyperparameter(['kld_rigidity'], tuple([exp_params['frameworks'][f]['kld_rigidity_range']]))
+            sample_params['max_epochs'] = exp_params['frameworks'][f]['max_epochs']
+            sample_params['dataset'] = dataset_type
+            print(f"\nRunning {f}")
+            print('Hyperparameters:')
+            print(sample_params)
+            print('Dataset to be used: ', dataset_type)
+            print('Experiment params:')
+            print(exp_params, "\n")
 
-        print('Hyperparameters:')
-        print(sample_params)
-        print('Dataset to be used: ', dataset_type)
+            run_experiment(sample_params, dataset_type, f, job_output_dir, exp_params['frameworks'][f])
 
-        run_experiment(sample_params, dataset_type, 'modified_credence', job_output_dir, exp_args)
-
-        run_experiment(sample_params, dataset_type, 'credence', job_output_dir, exp_args)
+        #run_experiment(sample_params, dataset_type, 'credence', job_output_dir, exp_params['frameworks']['credence'])
 
 
 if __name__ == "__main__":
@@ -206,17 +210,21 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     
     parser.add_argument('job_name', type = str)
-    parser.add_argument('--dataset_type', type = str, default = 'acic19_linear')
-    parser.add_argument('--max_epochs', type = int, default = 250)
+    #parser.add_argument('--dataset_type', type = str, default = 'acic19_linear')
+    #parser.add_argument('--max_epochs', type = int, default = 250)
     parser.add_argument('--no_of_exps', type = int, default = 10)
-    parser.add_argument('--merge_plots', type = bool, default = False)
+    #parser.add_argument('--merge_plots', type = bool, default = False)
     args = parser.parse_args()
     job_name = f'job-{args.job_name}'
     job_dir = os.path.join(os.getcwd(), f'outputs/{job_name}')
     #job_output_dir = os.path.join(os.getcwd(), f'./outputs/{job_name}')
+
+    exp_params = read_yaml('./exp_config.yaml')
+    #print(exp_params, list(exp_params['frameworks'].keys()))
+
     if not(os.path.exists(job_dir)):
         os.mkdir(job_dir)
-        run_job(job_dir, args.dataset_type, args)
+        run_job(job_dir, exp_params['dataset_type'], exp_params)
     else:
         print('Job with the same name already exists! Pick another name!')
 

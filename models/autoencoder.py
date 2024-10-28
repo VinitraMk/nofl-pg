@@ -27,6 +27,7 @@ class conVAE(pl.LightningModule):
         effect_rigidity=1e20,  # strength of treatment effect constraint
         bias_rigidity=1e20,  # strength of selection bias constraint
         kld_rigidity=0.1,  # strength of KL divergence loss
+        lr=1e-3 # learning rate of the models
     ):
         super().__init__()
         
@@ -41,6 +42,7 @@ class conVAE(pl.LightningModule):
         self.batch_size = batch_size
         self.potential_outcome = potential_outcome
         self.kld_rigidity = kld_rigidity
+        self.lr = lr
         
         # indices of the categorical variable in Y
         self.cat_col_idx = [i for i in range(self.in_dim) if Ynames[i] in cat_cols]
@@ -221,7 +223,7 @@ class conVAE(pl.LightningModule):
 
     def configure_optimizers(self):
         # initializing optimizer
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
         return optimizer
 
     def training_step(self, train_batch, batch_idx):

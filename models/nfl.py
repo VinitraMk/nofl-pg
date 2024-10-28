@@ -16,7 +16,7 @@ class NFL:
         treatment_var,
         categorical_var,
         numerical_var,
-        var_bounds = {}
+        var_bounds = {},
     ):
         self.data_raw = data
         self.Ynames = outcome_var
@@ -46,7 +46,8 @@ class NFL:
         kld_rigidity = 0.2,
         max_epochs = 100,
         treatment_effect_fn=lambda x: 0,
-        selection_bias_fn=lambda x, t: 0
+        selection_bias_fn=lambda x, t: 0,
+        lr = 1e-3
     ):
         
         # generator for treatment
@@ -61,6 +62,7 @@ class NFL:
              latent_dim=latent_dim,
              hidden_dim=hidden_dim,
              kld_rigidity=kld_rigidity,
+             lr = lr
         ).float()
 
         # generate T without from gt T
@@ -117,7 +119,8 @@ class NFL:
             treatment_cols = self.Tnames,
             treatment_effect_fn = treatment_effect_fn,
             selection_bias_fn = selection_bias_fn,
-            kld_rigidity = kld_rigidity
+            kld_rigidity = kld_rigidity,
+            lr = lr
         ).float()
         bar = pb.ProgressBar()
         self.trainer_out = pl.Trainer(

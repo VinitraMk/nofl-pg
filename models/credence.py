@@ -46,7 +46,8 @@ class Credence:
         kld_rigidity = 0.2,
         max_epochs = 100,
         treatment_effect_fn=lambda x: 0,
-        selection_bias_fn=lambda x, t: 0
+        selection_bias_fn=lambda x, t: 0,
+        lr = 1e-3
     ):
         
         # generator for treatment
@@ -61,6 +62,7 @@ class Credence:
              latent_dim=latent_dim,
              hidden_dim=hidden_dim,
              kld_rigidity=kld_rigidity,
+             lr = lr
         )
 
         bar = pb.ProgressBar()
@@ -81,7 +83,8 @@ class Credence:
             var_bounds = self.var_bounds,
             latent_dim = latent_dim,
             hidden_dim = hidden_dim,
-            kld_rigidity = kld_rigidity 
+            kld_rigidity = kld_rigidity,
+            lr = lr
         )
         bar = pb.ProgressBar()
         self.trainer_cov = pl.Trainer(
@@ -105,7 +108,8 @@ class Credence:
             treatment_cols = self.Tnames,
             treatment_effect_fn = treatment_effect_fn,
             selection_bias_fn = selection_bias_fn,
-            kld_rigidity = kld_rigidity
+            kld_rigidity = kld_rigidity,
+            lr = lr
         ).float()
         bar = pb.ProgressBar()
         self.trainer_out = pl.Trainer(
