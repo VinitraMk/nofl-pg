@@ -15,7 +15,7 @@ from datetime import datetime
 import os
 
 # define function for showing probability distributions
-def view_distribution(gt_df, generated_df, colnames, chart_path, figsize = (15,30)):
+def view_distribution(gt_df, generated_df, colnames, chart_path, figsize = (15,30), merge_plots = False):
 
     # print(X[:,0].shape, generated_df[1]["X1"].shape)
     # print('true value range', X[:, 0].min(), X[:, 0].max())
@@ -24,14 +24,21 @@ def view_distribution(gt_df, generated_df, colnames, chart_path, figsize = (15,3
     #plt.show()
     nrows = len(colnames)
     size = figsize
-    fig,ax = plt.subplots(nrows=nrows,ncols=2,figsize=size)
     
-
-    for i,yvar in enumerate(colnames):
-        sns.kdeplot(gt_df[yvar], ax = ax[i,0], fill = True)
-        ax[i,0].set_title(f'Observed {yvar}')
-        sns.kdeplot(generated_df[yvar], ax = ax[i,1], fill = True)
-        ax[i,1].set_title(f'Generated {yvar}')
+    if merge_plots:
+        fig,ax = plt.subplots(nrows=nrows,ncols=1,figsize=size)
+        for i,yvar in enumerate(colnames):
+            sns.kdeplot(gt_df[yvar], ax = ax[i], fill = True)
+            #ax[i,0].set_title(f'Observed {yvar}')
+            sns.kdeplot(generated_df[yvar], ax = ax[i], fill = True)
+            ax[i].set_title(f'Observed vs Generated {yvar}')
+    else:
+        fig,ax = plt.subplots(nrows=nrows,ncols=2,figsize=size)
+        for i,yvar in enumerate(colnames):
+            sns.kdeplot(gt_df[yvar], ax = ax[i,0], fill = True)
+            ax[i,0].set_title(f'Observed {yvar}')
+            sns.kdeplot(generated_df[yvar], ax = ax[i,1], fill = True)
+            ax[i,1].set_title(f'Generated {yvar}')
     
     plt.savefig(chart_path)
 
@@ -39,7 +46,7 @@ def view_distribution(gt_df, generated_df, colnames, chart_path, figsize = (15,3
 
 # conduct experiment
 
-def use_modified_credence(gt_df, x_vars, y_vars, out_vars, treat_vars, categorical_vars, num_vars, sample_params, output_dir):
+def use_modified_credence(gt_df, x_vars, y_vars, out_vars, treat_vars, categorical_vars, num_vars, sample_params, output_dir, exp_args):
     nfl_obj = nfl.NFL(
         data = gt_df,
         outcome_var = out_vars,
@@ -52,7 +59,7 @@ def use_modified_credence(gt_df, x_vars, y_vars, out_vars, treat_vars, categoric
     #print('\n\nHyperparameters')
     #print('kld rigidity:', sample_params['kld_rigidity'])
     #print('max epochs', max_epochs, '\n\n')
-    gen_models = nfl_obj.fit(latent_dim = 4, hidden_dim = [8,16,8], kld_rigidity = sample_params['kld_rigidity'], max_epochs = sample_params['max_epochs'])
+    gen_models = nfl_obj.fit(latent_dim = 4, hidden_dim = [8,16,32,16,8], kld_rigidity = sample_params['kld_rigidity'], max_epochs = sample_params['max_epochs'])
 
     # generated samples
     generated_df, generated_df_prime = nfl_obj.sample()
@@ -70,7 +77,7 @@ def use_modified_credence(gt_df, x_vars, y_vars, out_vars, treat_vars, categoric
     chart_path = os.path.join(exp_dir, filename)
     params_path = os.path.join(exp_dir, f'{experiment_name}-params.txt')
     csv_path = os.path.join(exp_dir, f'{experiment_name}-gendata.csv')
-    view_distribution(gt_df, generated_df_prime, y_vars, chart_path, (10,10))
+    view_distribution(gt_df, generated_df_prime, y_vars, chart_path, (10,10), exp_args.merge_plots)
     save_params(sample_params, params_path)
     generated_df_prime.to_csv(csv_path, index = False)
     #print(generated_df_prime['Y'].shape, gt_df['Y'].shape, generated_df_prime['Y_cf'].shape, gt_df['Y_cf'].shape)
@@ -80,7 +87,7 @@ def use_modified_credence(gt_df, x_vars, y_vars, out_vars, treat_vars, categoric
     #print('Inception score: ', iss)
 
 
-def use_credence(gt_df, x_vars, y_vars, out_vars, treat_vars, categorical_vars, num_vars, sample_params, output_dir):
+def use_credence(gt_df, x_vars, y_vars, out_vars, treat_vars, categorical_vars, num_vars, sample_params, output_dir, exp_args):
     cred_obj = credence.Credence(
         data = gt_df,
         outcome_var = out_vars,
@@ -93,7 +100,7 @@ def use_credence(gt_df, x_vars, y_vars, out_vars, treat_vars, categorical_vars, 
     #print('\n\nHyperparameters')
     #print('kld rigidity:', sample_params['kld_rigidity'])
     #print('max epochs', max_epochs, '\n\n')
-    gen_models = cred_obj.fit(latent_dim = 4, hidden_dim = [8,16,8], kld_rigidity = sample_params['kld_rigidity'], max_epochs = sample_params['max_epochs'])
+    gen_models = cred_obj.fit(latent_dim = 4, hidden_dim = [8,16,32,16,8], kld_rigidity = sample_params['kld_rigidity'], max_epochs = sample_params['max_epochs'])
 
     # generated samples
     generated_df, generated_df_prime = cred_obj.sample()
@@ -111,11 +118,11 @@ def use_credence(gt_df, x_vars, y_vars, out_vars, treat_vars, categorical_vars, 
     filename = f'{experiment_name}-X'
     params_path = os.path.join(exp_dir, f'{experiment_name}-params.txt')
     chart_path = os.path.join(exp_dir, filename)
-    view_distribution(gt_df, generated_df_prime, x_vars, chart_path, (25,50))
+    view_distribution(gt_df, generated_df_prime, x_vars, chart_path, (25,50), exp_args.merge_plots)
     filename = f'{experiment_name}-Y'
     chart_path = os.path.join(exp_dir, filename)
     csv_path = os.path.join(exp_dir, f'{experiment_name}-gendata.csv')
-    view_distribution(gt_df, generated_df_prime, y_vars, chart_path, (10,10))
+    view_distribution(gt_df, generated_df_prime, y_vars, chart_path, (10,10), exp_args.merge_plots)
     save_params(sample_params, params_path)
     generated_df_prime.to_csv(csv_path, index = False)
     #print(generated_df_prime['Y'].shape, gt_df['Y'].shape)
@@ -124,7 +131,7 @@ def use_credence(gt_df, x_vars, y_vars, out_vars, treat_vars, categorical_vars, 
     #print('FID score: ', fids)
     #print('Inception score: ', iss)
 
-def run_experiment(sample_params, dataset_type, framework_type, output_dir):
+def run_experiment(sample_params, dataset_type, framework_type, output_dir, exp_args):
     if dataset_type == 'toy':
     # generating toy dataset
         X = np.random.normal(0, 1, (2000, 5))
@@ -141,10 +148,10 @@ def run_experiment(sample_params, dataset_type, framework_type, output_dir):
 
         if framework_type == 'modified_credence':
             print("\nRunning modified credence")
-            use_modified_credence(gt_df, xnames, ynames, ['Y'], ['T'], ['T'], ['Y'], sample_params, output_dir)
+            use_modified_credence(gt_df, xnames, ynames, ['Y'], ['T'], ['T'], ['Y'], sample_params, output_dir, exp_args)
         elif framework_type == 'credence':
             print("\nRunning credence")
-            use_credence(gt_df, xnames, ynames, ['Y'], ['T'], ['T'], ['Y'], sample_params, output_dir)
+            use_credence(gt_df, xnames, ynames, ['Y'], ['T'], ['T'], ['Y'], sample_params, output_dir, exp_args)
         else:
             SystemExit('Invalid framework type provided')
     elif dataset_type == 'acic19_linear':
@@ -155,10 +162,10 @@ def run_experiment(sample_params, dataset_type, framework_type, output_dir):
 
         if framework_type == 'modified_credence':
             print("\nRunning modified credence")
-            use_modified_credence(gt_df, x_vars, y_vars, ['Y'], ['A'], ['A'], ['Y'], sample_params, output_dir)
+            use_modified_credence(gt_df, x_vars, y_vars, ['Y'], ['A'], ['A'], ['Y'], sample_params, output_dir, exp_args)
         elif framework_type == 'credence':
             print("\nRunning Credence")
-            use_credence(gt_df, x_vars, y_vars, ['Y'], ['A'], ['A'], ['Y'], sample_params, output_dir)
+            use_credence(gt_df, x_vars, y_vars, ['Y'], ['A'], ['A'], ['Y'], sample_params, output_dir, exp_args)
         else:
             SystemExit('Invalid framework type provided')
     elif dataset_type == 'acic19_polynomial':
@@ -169,29 +176,29 @@ def run_experiment(sample_params, dataset_type, framework_type, output_dir):
 
         if framework_type == 'modified_credence':
             print("\n\n\nRunning modified credence")
-            use_modified_credence(gt_df, x_vars, y_vars, ['Y'], ['A'], ['A'], ['Y'], sample_params, output_dir)
+            use_modified_credence(gt_df, x_vars, y_vars, ['Y'], ['A'], ['A'], ['Y'], sample_params, output_dir, exp_args)
         elif framework_type == 'credence':
             print("\n\n\nRunning credence")
-            use_credence(gt_df, x_vars, y_vars, ['Y'], ['A'], ['A'], ['Y'], sample_params, output_dir)
+            use_credence(gt_df, x_vars, y_vars, ['Y'], ['A'], ['A'], ['Y'], sample_params, output_dir, exp_args)
         else:
             SystemExit('Invalid framework type provided')
     else:
         SystemExit('Invalid dataset value provided!')
 
-def run_job(job_output_dir, dataset_type, max_epochs = 250, no_of_experiments = 10):
-    for j in range(no_of_experiments):
+def run_job(job_output_dir, dataset_type, exp_args):
+    for j in range(exp_args.no_of_exps):
         print(f"\n\nRunning experiment #{j+1}\n\n")
-        sample_params = sample_hyperparameter(['kld_rigidity'], [(0.0,0.3)])
-        sample_params['max_epochs'] = max_epochs
+        sample_params = sample_hyperparameter(['kld_rigidity'], [(0.1,0.2)])
+        sample_params['max_epochs'] = exp_args.max_epochs
         sample_params['dataset'] = dataset_type
 
         print('Hyperparameters:')
         print(sample_params)
         print('Dataset to be used: ', dataset_type)
 
-        run_experiment(sample_params, dataset_type, 'modified_credence', job_output_dir)
+        run_experiment(sample_params, dataset_type, 'modified_credence', job_output_dir, exp_args)
 
-        run_experiment(sample_params, dataset_type, 'credence', job_output_dir)
+        run_experiment(sample_params, dataset_type, 'credence', job_output_dir, exp_args)
 
 
 if __name__ == "__main__":
@@ -200,14 +207,16 @@ if __name__ == "__main__":
     
     parser.add_argument('job_name', type = str)
     parser.add_argument('--dataset_type', type = str, default = 'acic19_linear')
-    parser.add_argument('--max_epochs', type = int, default = 3)
+    parser.add_argument('--max_epochs', type = int, default = 250)
+    parser.add_argument('--no_of_exps', type = int, default = 10)
+    parser.add_argument('--merge_plots', type = bool, default = False)
     args = parser.parse_args()
     job_name = f'job-{args.job_name}'
     job_dir = os.path.join(os.getcwd(), f'outputs/{job_name}')
     #job_output_dir = os.path.join(os.getcwd(), f'./outputs/{job_name}')
     if not(os.path.exists(job_dir)):
         os.mkdir(job_dir)
-        run_job(job_dir, args.dataset_type, args.max_epochs, 5)
+        run_job(job_dir, args.dataset_type, args)
     else:
         print('Job with the same name already exists! Pick another name!')
 

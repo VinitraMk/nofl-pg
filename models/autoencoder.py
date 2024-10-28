@@ -221,7 +221,7 @@ class conVAE(pl.LightningModule):
 
     def configure_optimizers(self):
         # initializing optimizer
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
         return optimizer
 
     def training_step(self, train_batch, batch_idx):
