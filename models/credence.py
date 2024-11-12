@@ -1,4 +1,5 @@
 import models.autoencoder as autoencoder
+import models.autoencoder_uniform as uniform_autoencoder
 import pytorch_lightning.callbacks.progress as pb
 import torch
 import pytorch_lightning as pl
@@ -47,23 +48,37 @@ class Credence:
         max_epochs = 100,
         treatment_effect_fn=lambda x: 0,
         selection_bias_fn=lambda x, t: 0,
-        lr = 1e-3
+        lr = 1e-3,
+        use_uniform_autoencoder = False 
     ):
         
         # generator for treatment
         #self.model_treat = self.data_processed[self.Tnames].mean()
         # generate T without from gt T
-        self.model_treat = autoencoder.conVAE(
-             df=self.data_processed,
-             Xnames=[],
-             Ynames=self.Tnames,
-             cat_cols=self.categorical_var,
-             var_bounds=self.var_bounds,
-             latent_dim=latent_dim,
-             hidden_dim=hidden_dim,
-             kld_rigidity=kld_rigidity,
-             lr = lr
-        )
+        if use_uniform_autoencoder:
+            self.model_treat = uniform_autoencoder.conVAE(
+                df=self.data_processed,
+                Xnames=[],
+                Ynames=self.Tnames,
+                cat_cols=self.categorical_var,
+                var_bounds=self.var_bounds,
+                latent_dim=latent_dim,
+                hidden_dim=hidden_dim,
+                kld_rigidity=kld_rigidity,
+                lr = lr
+            )
+        else:
+            self.model_treat = autoencoder.conVAE(
+                df=self.data_processed,
+                Xnames=[],
+                Ynames=self.Tnames,
+                cat_cols=self.categorical_var,
+                var_bounds=self.var_bounds,
+                latent_dim=latent_dim,
+                hidden_dim=hidden_dim,
+                kld_rigidity=kld_rigidity,
+                lr = lr
+            )
 
         bar = pb.ProgressBar()
         self.trainer_treat = pl.Trainer(
@@ -75,17 +90,30 @@ class Credence:
         )
 
         # generator for X | T
-        self.model_cov = autoencoder.conVAE(
-            df = self.data_processed,
-            Xnames=self.Tnames,
-            Ynames = self.Xnames,
-            cat_cols = self.categorical_var,
-            var_bounds = self.var_bounds,
-            latent_dim = latent_dim,
-            hidden_dim = hidden_dim,
-            kld_rigidity = kld_rigidity,
-            lr = lr
-        )
+        if use_uniform_autoencoder:
+            self.model_cov = uniform_autoencoder.conVAE(
+                df = self.data_processed,
+                Xnames=self.Tnames,
+                Ynames = self.Xnames,
+                cat_cols = self.categorical_var,
+                var_bounds = self.var_bounds,
+                latent_dim = latent_dim,
+                hidden_dim = hidden_dim,
+                kld_rigidity = kld_rigidity,
+                lr = lr
+            )
+        else:
+            self.model_cov = autoencoder.conVAE(
+                df = self.data_processed,
+                Xnames=self.Tnames,
+                Ynames = self.Xnames,
+                cat_cols = self.categorical_var,
+                var_bounds = self.var_bounds,
+                latent_dim = latent_dim,
+                hidden_dim = hidden_dim,
+                kld_rigidity = kld_rigidity,
+                lr = lr
+            )
         bar = pb.ProgressBar()
         self.trainer_cov = pl.Trainer(
             max_epochs = max_epochs,
@@ -96,21 +124,38 @@ class Credence:
         )
 
         # generator for Y | X,T
-        self.model_out = autoencoder.conVAE(
-            df = self.data_processed,
-            Xnames = self.Xnames + self.Tnames,
-            Ynames = self.Ynames,
-            cat_cols = self.categorical_var,
-            var_bounds = self.var_bounds,
-            latent_dim = latent_dim,
-            hidden_dim = hidden_dim,
-            potential_outcome = True,
-            treatment_cols = self.Tnames,
-            treatment_effect_fn = treatment_effect_fn,
-            selection_bias_fn = selection_bias_fn,
-            kld_rigidity = kld_rigidity,
-            lr = lr
-        ).float()
+        if use_uniform_autoencoder:
+            self.model_out = uniform_autoencoder.conVAE(
+                df = self.data_processed,
+                Xnames = self.Xnames + self.Tnames,
+                Ynames = self.Ynames,
+                cat_cols = self.categorical_var,
+                var_bounds = self.var_bounds,
+                latent_dim = latent_dim,
+                hidden_dim = hidden_dim,
+                potential_outcome = True,
+                treatment_cols = self.Tnames,
+                treatment_effect_fn = treatment_effect_fn,
+                selection_bias_fn = selection_bias_fn,
+                kld_rigidity = kld_rigidity,
+                lr = lr
+            ).float()
+        else:
+            self.model_out = autoencoder.conVAE(
+                df = self.data_processed,
+                Xnames = self.Xnames + self.Tnames,
+                Ynames = self.Ynames,
+                cat_cols = self.categorical_var,
+                var_bounds = self.var_bounds,
+                latent_dim = latent_dim,
+                hidden_dim = hidden_dim,
+                potential_outcome = True,
+                treatment_cols = self.Tnames,
+                treatment_effect_fn = treatment_effect_fn,
+                selection_bias_fn = selection_bias_fn,
+                kld_rigidity = kld_rigidity,
+                lr = lr
+            ).float()
         bar = pb.ProgressBar()
         self.trainer_out = pl.Trainer(
             max_epochs = max_epochs,

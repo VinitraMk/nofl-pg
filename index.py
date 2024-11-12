@@ -43,6 +43,28 @@ def view_distribution(gt_df, generated_df, colnames, chart_path, figsize = (15,3
     plt.savefig(chart_path)
 
     #plt.show()
+def view_treatment_plot(gt_df, generated_df, treat_var, chart_path, figsize = (15, 30)):
+    plt.figure(figsize = figsize)
+    Y0 = gt_df.loc[gt_df[treat_var] == 0]
+    Y1 = gt_df.loc[gt_df[treat_var] == 1]
+    Y0gen = generated_df.loc[generated_df[treat_var] == 0]
+    Y1gen = generated_df.loc[generated_df[treat_var] == 1]
+
+    d = pd.DataFrame({
+        'Ground truth': {
+            'Y0': Y0.shape[0],
+            'Y1': Y1.shape[0],
+        },
+        'Generated data': {
+            'Y0': Y0gen.shape[0],
+            'Y1': Y1gen.shape[0]
+        }
+    })
+    #print(list(d.keys()))
+    fig,ax = plt.subplots(nrows=1,ncols=1,figsize=figsize)
+    d.plot(kind = 'bar', ax = ax, color = ['skyblue', 'orange'])
+    
+    plt.savefig(chart_path)
 
 # conduct experiment
 
@@ -59,12 +81,14 @@ def use_modified_credence(gt_df, x_vars, y_vars, out_vars, treat_vars, categoric
     #print('\n\nHyperparameters')
     #print('kld rigidity:', sample_params['kld_rigidity'])
     #print('max epochs', max_epochs, '\n\n')
-    gen_models = nfl_obj.fit(latent_dim = 4, hidden_dim = [8,16,32,16,8], kld_rigidity = sample_params['kld_rigidity'], max_epochs = sample_params['max_epochs'], lr = exp_params['lr'])
-
+    gen_models = nfl_obj.fit(latent_dim = exp_params['latent_dim'],
+        hidden_dim = exp_params['hidden_dims'],
+        kld_rigidity = sample_params['kld_rigidity'], max_epochs = sample_params['max_epochs'], lr = exp_params['lr'], use_uniform_autoencoder = exp_params['use_uniform_autoencoder'])
+    treat_var = treat_vars[0]
     # generated samples
     generated_df, generated_df_prime = nfl_obj.sample()
-    generated_df_prime['Y'] = (generated_df_prime['A'] * generated_df_prime['Y1']) + ((1 - generated_df_prime['A']) * generated_df_prime['Y0'])
-    generated_df_prime['Y_cf'] = (generated_df_prime['A'] * generated_df_prime['Yprime1']) + ((1 - generated_df_prime['A']) * generated_df_prime['Yprime0'])
+    generated_df_prime['Y'] = (generated_df_prime[treat_var] * generated_df_prime['Y1']) + ((1 - generated_df_prime[treat_var]) * generated_df_prime['Y0'])
+    generated_df_prime['Y_cf'] = (generated_df_prime[treat_var] * generated_df_prime['Yprime1']) + ((1 - generated_df_prime[treat_var]) * generated_df_prime['Yprime0'])
     experiment_name = "exp-{:%Y%m%d%H%M%S}".format(datetime.now())
     output_dir = os.path.join(output_dir, 'modified-credence')
     if not(os.path.exists(output_dir)):
@@ -75,10 +99,16 @@ def use_modified_credence(gt_df, x_vars, y_vars, out_vars, treat_vars, categoric
 
     filename = f'{experiment_name}-Y'
     chart_path = os.path.join(exp_dir, filename)
-    params_path = os.path.join(exp_dir, f'{experiment_name}-params.txt')
-    csv_path = os.path.join(exp_dir, f'{experiment_name}-gendata.csv')
     view_distribution(gt_df, generated_df_prime, y_vars, chart_path, (10,10), exp_params['merge_plots'])
+    filename = f'{experiment_name}-{treat_var}'
+    chart_path = os.path.join(exp_dir, filename)
+    view_treatment_plot(gt_df, generated_df, treat_var, chart_path, (15, 30))
+    
+    params_path = os.path.join(exp_dir, f'{experiment_name}-params.txt')
     save_params(sample_params, params_path)
+    params_path = os.path.join(exp_dir, f'{experiment_name}-exp-params.txt')
+    save_params(exp_params, params_path)
+    csv_path = os.path.join(exp_dir, f'{experiment_name}-gendata.csv')
     generated_df_prime.to_csv(csv_path, index = False)
     #print(generated_df_prime['Y'].shape, gt_df['Y'].shape, generated_df_prime['Y_cf'].shape, gt_df['Y_cf'].shape)
     #fids = fid_score(gt_df, generated_df_prime, y_vars)
@@ -100,12 +130,14 @@ def use_credence(gt_df, x_vars, y_vars, out_vars, treat_vars, categorical_vars, 
     #print('\n\nHyperparameters')
     #print('kld rigidity:', sample_params['kld_rigidity'])
     #print('max epochs', max_epochs, '\n\n')
-    gen_models = cred_obj.fit(latent_dim = 4, hidden_dim = [8,16,32,16,8], kld_rigidity = sample_params['kld_rigidity'], max_epochs = sample_params['max_epochs'], lr = exp_params['lr'])
-
+    gen_models = cred_obj.fit(latent_dim = exp_params['latent_dim'],
+        hidden_dim = exp_params['hidden_dims'],
+        kld_rigidity = sample_params['kld_rigidity'], max_epochs = sample_params['max_epochs'], lr = exp_params['lr'], use_uniform_autoencoder = exp_params['use_uniform_autoencoder'])
+    treat_var = treat_vars[0]
     # generated samples
     generated_df, generated_df_prime = cred_obj.sample()
-    generated_df_prime['Y'] = (generated_df_prime['A'] * generated_df_prime['Y1']) + ((1 - generated_df_prime['A']) * generated_df_prime['Y0'])
-    generated_df_prime['Y_cf'] = (generated_df_prime['A'] * generated_df_prime['Yprime1']) + ((1 - generated_df_prime['A']) * generated_df_prime['Yprime0'])
+    generated_df_prime['Y'] = (generated_df_prime[treat_var] * generated_df_prime['Y1']) + ((1 - generated_df_prime[treat_var]) * generated_df_prime['Y0'])
+    generated_df_prime['Y_cf'] = (generated_df_prime[treat_var] * generated_df_prime['Yprime1']) + ((1 - generated_df_prime[treat_var]) * generated_df_prime['Yprime0'])
 
     experiment_name = "exp-{:%Y%m%d%H%M%S}".format(datetime.now())
     output_dir = os.path.join(output_dir, 'credence')
@@ -116,14 +148,19 @@ def use_credence(gt_df, x_vars, y_vars, out_vars, treat_vars, categorical_vars, 
         os.mkdir(exp_dir)
 
     filename = f'{experiment_name}-X'
-    params_path = os.path.join(exp_dir, f'{experiment_name}-params.txt')
     chart_path = os.path.join(exp_dir, filename)
     view_distribution(gt_df, generated_df_prime, x_vars, chart_path, (25,50), exp_params['merge_plots'])
     filename = f'{experiment_name}-Y'
     chart_path = os.path.join(exp_dir, filename)
-    csv_path = os.path.join(exp_dir, f'{experiment_name}-gendata.csv')
     view_distribution(gt_df, generated_df_prime, y_vars, chart_path, (10,10), exp_params['merge_plots'])
+    filename = f'{experiment_name}-{treat_var}'
+    chart_path = os.path.join(exp_dir, filename)
+    view_treatment_plot(gt_df, generated_df, treat_var, chart_path, (15, 30))
+    params_path = os.path.join(exp_dir, f'{experiment_name}-params.txt')
     save_params(sample_params, params_path)
+    params_path = os.path.join(exp_dir, f'{experiment_name}-exp-params.txt')
+    save_params(exp_params, params_path)
+    csv_path = os.path.join(exp_dir, f'{experiment_name}-gendata.csv')
     generated_df_prime.to_csv(csv_path, index = False)
     #print(generated_df_prime['Y'].shape, gt_df['Y'].shape)
     #fids = fid_score(gt_df, generated_df_prime, y_vars)
@@ -144,6 +181,7 @@ def run_experiment(sample_params, dataset_type, framework_type, output_dir, exp_
 
         gt_df = pd.DataFrame(X, columns=['X%d'%(i) for i in range(X.shape[1])])
         gt_df['Y'] = T*Y1 + (1 - T)*Y0
+        gt_df['Y_cf'] = (1 - T) * Y1 + T*Y0
         gt_df['T'] = T
 
         if framework_type == 'modified_credence':
@@ -208,14 +246,13 @@ def run_job(job_output_dir, dataset_type, exp_params):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    
-    parser.add_argument('job_name', type = str)
+    parser.add_argument('--job_name', type = str, default = "")
     #parser.add_argument('--dataset_type', type = str, default = 'acic19_linear')
-    #parser.add_argument('--max_epochs', type = int, default = 250)
-    parser.add_argument('--no_of_exps', type = int, default = 10)
-    #parser.add_argument('--merge_plots', type = bool, default = False)
+    parser.add_argument('--no_of_exps', type = int, default = 5)
     args = parser.parse_args()
-    job_name = f'job-{args.job_name}'
+    if args.job_name == "":
+        nj = len(os.listdir('./outputs'))
+        job_name = f"job-{nj + 1}"
     job_dir = os.path.join(os.getcwd(), f'outputs/{job_name}')
     #job_output_dir = os.path.join(os.getcwd(), f'./outputs/{job_name}')
 
